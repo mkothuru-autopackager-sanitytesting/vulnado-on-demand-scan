@@ -3,7 +3,8 @@ name: Veracode Build Artifact
 run-name: Vulnado Build Artifact - ${{ github.event.client_payload.event_type }} - ${{ github.event.client_payload.repository.branch }}
 
 on:
-  push:
+  pull_request:
+    types: [opened, reopened, closed]
 
 jobs:
   build:
