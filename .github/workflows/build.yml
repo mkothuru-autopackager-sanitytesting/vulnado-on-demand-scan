@@ -1,23 +1,30 @@
 name: Veracode Build Artifact
 
-run-name: Vulnado Build Artifact - ${{ github.event.client_payload.event_type }} - ${{ github.event.client_payload.repository.branch }}
+run-name: Veracode Build Artifact
 
 on:
   repository_dispatch:
-    types: [vulnado-build]
+    types: [veracode-build]
 
 jobs:
   register:
-    uses: ./.github/workflows/veracode-check-run.yml
-    with:
-      check_run_name: ${{ github.workflow }}
-      head_sha: ${{ github.event.client_payload.sha }}
-      repositroy_owner: ${{ github.event.client_payload.repository.owner }}
-      repositroy_name: ${{ github.event.client_payload.repository.name }}
-      event_type: ${{ github.event.client_payload.event_type }}
-      github_token: ${{ github.event.client_payload.token }}
-      run_id: ${{ github.run_id }}
-      branch: ${{ github.event.client_payload.repository.branch }}
+    runs-on: ubuntu-latest
+    name: register
+    steps:
+      - name: Register build
+        id: register-build
+        uses: veracode/github-actions-integration-helper@main
+        with:
+          action: registerBuild
+          token: ${{ github.event.client_payload.token }}
+          appname: ${{ github.event.client_payload.user_config.profile_name }}
+          source_repository: ${{ github.event.client_payload.repository.full_name }}
+          check_run_id: ${{ github.run_id }}
+          check_run_name: ${{ github.workflow }}
+          head_sha: ${{ github.event.client_payload.sha }}
+          event_type: ${{ github.event.client_payload.event_type }}
+          branch: ${{ github.event.client_payload.user_config.sandbox_scan.branch }}
+          issue_trigger_flow: ${{ github.event.client_payload.user_config.issue_trigger_flow }}
 
   build:
     runs-on: ubuntu-latest
@@ -44,7 +51,6 @@ jobs:
         VERACODE_API_KEY_ID: '${{ secrets.VERACODE_API_ID }}'
         VERACODE_API_KEY_SECRET: '${{ secrets.VERACODE_API_KEY }}'
       run: |
-        echo ${{ github.event.client_payload.repository.artifact_name }}
         cd veracode-helper/helper/cli
         cliFile=$(ls -1 . | head -n 1)
         cliFileName=$(echo "$cliFile" | cut -c 1-$((${#cliFile}-7)))
@@ -53,9 +59,9 @@ jobs:
         chmod +x install.sh
         ./install.sh system
         cd /home/runner/work/vulnado/vulnado/
-        veracode package --source . --output vulnado-artifacts --trust
-        zip vulnado-artifact.zip vulnado-artifacts/* -x .zip .tar .tar.gz .gz
+        veracode package --source . --output veracode-artifacts --trust
+        zip veracode-artifact.zip veracode-artifacts/* -x .zip .tar .tar.gz .gz
     - uses: actions/upload-artifact@v4
       with:
-        name: vulnado-artifact
-        path: vulnado-artifact.zip
+        name: veracode-artifact
+        path: veracode-artifact.zip
